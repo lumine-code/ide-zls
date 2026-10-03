@@ -1,13 +1,13 @@
 {
-  "name": "ide-zig",
+  "name": "ide-zls",
   "author": "lumine-code",
   "description": "Provide Zig language features with ZLS.",
-  "repository": "https://github.com/lumine-code/ide-zig",
+  "repository": "https://github.com/lumine-code/ide-zls",
   "bugs": {
-    "url": "https://github.com/lumine-code/ide-zig/issues"
+    "url": "https://github.com/lumine-code/ide-zls/issues"
   },
   "keywords": [
-    "zls",
+    "zig",
     "zon",
     "comptime",
     "allocator",

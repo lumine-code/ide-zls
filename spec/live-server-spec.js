@@ -7,7 +7,7 @@ const serverPath = process.env.ZLS_PATH || require("../lib/server").findOnPath("
 if (process.env.REQUIRE_ZLS && (!serverPath || !zigPath))
   throw new Error("CI requires a native ZLS server and matching Zig SDK.");
 const liveSuite = serverPath && zigPath ? describe : () => {};
-liveSuite("ide-zig real ZLS and Zig SDK", () => {
+liveSuite("ide-zls real ZLS and Zig SDK", () => {
   let fixture, client, adapter, edge, timeout;
   beforeAll(() => {
     timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
@@ -19,9 +19,9 @@ liveSuite("ide-zig real ZLS and Zig SDK", () => {
   beforeEach(async () => {
     jasmine.useRealClock();
     fixture = createProject();
-    const main = (await lumine.packages.activatePackage("ide-zig")).mainModule;
-    lumine.config.set("ide-zig.serverPath", serverPath);
-    lumine.config.set("ide-zig.zigPath", zigPath);
+    const main = (await lumine.packages.activatePackage("ide-zls")).mainModule;
+    lumine.config.set("ide-zls.serverPath", serverPath);
+    lumine.config.set("ide-zls.zigPath", zigPath);
     edge = main.consumeIdeClient({
       registerAdapter(value) {
         adapter = value;
@@ -33,9 +33,9 @@ liveSuite("ide-zig real ZLS and Zig SDK", () => {
   afterEach(async () => {
     await client.stop();
     edge.dispose();
-    lumine.config.unset("ide-zig.serverPath");
-    lumine.config.unset("ide-zig.zigPath");
-    await lumine.packages.deactivatePackage("ide-zig");
+    lumine.config.unset("ide-zls.serverPath");
+    lumine.config.unset("ide-zls.zigPath");
+    await lumine.packages.deactivatePackage("ide-zls");
     await removeProject(fixture.rootPath);
   });
   it("returns usable compiler diagnostics, intelligence, source edits, hints, tokens and ZON formatting", async () => {
@@ -64,7 +64,7 @@ liveSuite("ide-zig real ZLS and Zig SDK", () => {
         version: process.env.ZLS_VERSION || "0.16.0",
       });
       expect(record.checksum).toMatch(/^sha256:[a-f0-9]{64}$/);
-      lumine.config.set("ide-zig.serverPath", "");
+      lumine.config.set("ide-zls.serverPath", "");
       const { serverInfo } = await client.start(managed.installFor(adapter));
       expect(serverInfo.version).toBe(record.version);
       const covered = await exerciseServer(client, fixture);

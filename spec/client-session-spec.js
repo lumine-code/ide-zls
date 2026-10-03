@@ -13,7 +13,7 @@ const until = async (check, label) => {
   }
   throw new Error(`${label} timed out`);
 };
-liveSuite("ide-zig actual editor routing", () => {
+liveSuite("ide-zls actual editor routing", () => {
   let fixture, editor, zonEditor, paths, service, published, subscription, timeout;
   beforeAll(() => {
     timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
@@ -27,9 +27,9 @@ liveSuite("ide-zig actual editor routing", () => {
     fixture = createProject();
     paths = lumine.project.getPaths();
     published = [];
-    lumine.config.set("ide-zig.serverPath", serverPath);
-    lumine.config.set("ide-zig.zigPath", zigPath);
-    for (const name of ["language-zig", "ide-client", "ide-zig"])
+    lumine.config.set("ide-zls.serverPath", serverPath);
+    lumine.config.set("ide-zls.zigPath", zigPath);
+    for (const name of ["language-zig", "ide-client", "ide-zls"])
       await lumine.packages.activatePackage(name);
     service = lumine.packages.getActivePackage("ide-client").mainModule.provideIdeClient();
     subscription = service.onDidPublishDiagnostics((value) => published.push(value));
@@ -41,7 +41,7 @@ liveSuite("ide-zig actual editor routing", () => {
     subscription.dispose();
     editor?.destroy();
     zonEditor?.destroy();
-    for (const name of ["ide-zig", "ide-client", "language-zig"])
+    for (const name of ["ide-zls", "ide-client", "language-zig"])
       await lumine.packages.deactivatePackage(name);
     for (const key of [
       "serverPath",
@@ -50,7 +50,7 @@ liveSuite("ide-zig actual editor routing", () => {
       "features.rename",
       "features.hover",
     ])
-      lumine.config.unset(`ide-zig.${key}`);
+      lumine.config.unset(`ide-zls.${key}`);
     lumine.project.setPaths(paths);
     await lumine.fileWatchClient.settlePendingTeardown();
     await removeProject(fixture.rootPath);
@@ -64,7 +64,7 @@ liveSuite("ide-zig actual editor routing", () => {
     const session = await until(
       async () =>
         (await service.activeSessionsForEditor(editor)).find(
-          ({ adapter }) => adapter.id === "ide-zig",
+          ({ adapter }) => adapter.id === "ide-zls",
         ),
       "Zig session",
     );
@@ -147,11 +147,11 @@ liveSuite("ide-zig actual editor routing", () => {
     expect(discard).toBeTruthy();
     await discard.selected();
     expect(editor.getText()).toContain("_ = unused;");
-    lumine.config.set("ide-zig.features.format", false);
+    lumine.config.set("ide-zls.features.format", false);
     expect(await m.provideCodeFormatFile().formatEntireFile(editor)).toEqual([]);
-    lumine.config.set("ide-zig.features.rename", false);
+    lumine.config.set("ide-zls.features.rename", false);
     expect(await m.provideRefactor().rename(editor, point("add(3,4)"), "sum")).toBeNull();
-    lumine.config.set("ide-zig.features.hover", false);
+    lumine.config.set("ide-zls.features.hover", false);
     expect(await m.provideHover().hover(editor, point("add(3,4)"))).toBeNull();
     expect(session.state).toBe("running");
   });
@@ -188,19 +188,19 @@ liveSuite("ide-zig actual editor routing", () => {
           ),
       "cleared Zig findings",
     );
-    const pkg = lumine.packages.getActivePackage("ide-zig"),
+    const pkg = lumine.packages.getActivePackage("ide-zls"),
       old = pkg.mainModule,
       packagePath = pkg.path;
-    await lumine.packages.deactivatePackage("ide-zig");
+    await lumine.packages.deactivatePackage("ide-zls");
     await until(() => previous.state === "stopped", "Zig teardown");
     expect(service.adaptersForEditor(editor)).toEqual([]);
-    await lumine.packages.unloadPackage("ide-zig");
+    await lumine.packages.unloadPackage("ide-zls");
     await lumine.packages.loadPackage(packagePath);
-    expect((await lumine.packages.activatePackage("ide-zig")).mainModule).not.toBe(old);
+    expect((await lumine.packages.activatePackage("ide-zls")).mainModule).not.toBe(old);
     const renewed = await until(
       async () =>
         (await service.activeSessionsForEditor(editor)).find(
-          ({ adapter }) => adapter.id === "ide-zig",
+          ({ adapter }) => adapter.id === "ide-zls",
         ),
       "fresh Zig session",
     );

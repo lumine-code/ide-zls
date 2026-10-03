@@ -1,16 +1,16 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { createProject, removeProject } = require("./helpers/project");
-describe("ide-zig executable discovery and managed releases", () => {
+describe("ide-zls executable discovery and managed releases", () => {
   let fixture, server;
   beforeEach(async () => {
     jasmine.useRealClock();
     fixture = createProject();
-    await lumine.packages.activatePackage("ide-zig");
+    await lumine.packages.activatePackage("ide-zls");
     server = require("../lib/server");
   });
   afterEach(async () => {
-    await lumine.packages.deactivatePackage("ide-zig");
+    await lumine.packages.deactivatePackage("ide-zls");
     await removeProject(fixture.rootPath);
   });
   it("prefers the configured server over managed and system copies", async () => {
@@ -152,10 +152,10 @@ describe("ide-zig executable discovery and managed releases", () => {
     expect(api.downloadFile).not.toHaveBeenCalled();
   });
 });
-describe("ide-zig service edges and actual settings", () => {
+describe("ide-zls service edges and actual settings", () => {
   let main, adapter, edge, cleanup;
   beforeEach(async () => {
-    main = (await lumine.packages.activatePackage("ide-zig")).mainModule;
+    main = (await lumine.packages.activatePackage("ide-zls")).mainModule;
     cleanup = jasmine.createSpy("cleanup");
     edge = main.consumeIdeClient({
       registerAdapter(value) {
@@ -167,15 +167,15 @@ describe("ide-zig service edges and actual settings", () => {
   afterEach(async () => {
     edge.dispose();
     for (const key of ["zigPath", "buildOnSave", "parameterHints"])
-      lumine.config.unset(`ide-zig.${key}`);
-    await lumine.packages.deactivatePackage("ide-zig");
+      lumine.config.unset(`ide-zls.${key}`);
+    await lumine.packages.deactivatePackage("ide-zls");
   });
   it("registers Zig and returns the exact provider-edge disposable", () => {
     expect(adapter.grammarScopes).toEqual(["source.zig"]);
     expect(adapter.languageId).toBe("zig");
     edge.dispose();
     expect(cleanup).toHaveBeenCalled();
-    expect(main.provideBackgroundTips().packageName).toBe("ide-zig");
+    expect(main.provideBackgroundTips().packageName).toBe("ide-zls");
   });
   it("keeps separately supplied client edges independent", () => {
     const secondCleanup = jasmine.createSpy("second"),
@@ -196,8 +196,8 @@ describe("ide-zig service edges and actual settings", () => {
   });
   it("sends only supported settings in the flat zls configuration namespace", async () => {
     spyOn(require("../lib/server"), "resolveZig").and.resolveTo(process.execPath);
-    lumine.config.set("ide-zig.buildOnSave", "disabled");
-    lumine.config.set("ide-zig.parameterHints", "enabled");
+    lumine.config.set("ide-zls.buildOnSave", "disabled");
+    lumine.config.set("ide-zls.parameterHints", "enabled");
     const expected = {
       zig_exe_path: process.execPath,
       enable_build_on_save: false,
@@ -227,13 +227,13 @@ describe("ide-zig service edges and actual settings", () => {
     ).toBe(true);
   });
   it("reacquires a fresh main module after unloading the package generation", async () => {
-    const packagePath = lumine.packages.getActivePackage("ide-zig").path;
-    await lumine.packages.deactivatePackage("ide-zig");
-    await lumine.packages.unloadPackage("ide-zig");
+    const packagePath = lumine.packages.getActivePackage("ide-zls").path;
+    await lumine.packages.deactivatePackage("ide-zls");
+    await lumine.packages.unloadPackage("ide-zls");
     await lumine.packages.loadPackage(packagePath);
-    const current = (await lumine.packages.activatePackage("ide-zig")).mainModule;
+    const current = (await lumine.packages.activatePackage("ide-zls")).mainModule;
     expect(current).not.toBe(main);
-    expect(current.provideBackgroundTips().packageName).toBe("ide-zig");
+    expect(current.provideBackgroundTips().packageName).toBe("ide-zls");
   });
   it("reports missing SDK or ZLS through the shared missing-server UI", async () => {
     spyOn(require("../lib/server"), "resolveServer").and.resolveTo(null);
@@ -248,7 +248,7 @@ describe("ide-zig service edges and actual settings", () => {
     });
     try {
       expect(await registered.resolveServer({ rootPath: "/project" })).toBeNull();
-      expect(missing.calls.mostRecent().args[0]).toBe("ide-zig");
+      expect(missing.calls.mostRecent().args[0]).toBe("ide-zls");
     } finally {
       registration.dispose();
     }

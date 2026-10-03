@@ -3,7 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL, fileURLToPath } = require("node:url");
 const createProject = () => {
-  const rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-zig-"));
+  const rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-zls-"));
   fs.mkdirSync(path.join(rootPath, "src"));
   const text = `const std = @import("std");
 const math = @import("math.zig");
@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) void {
 const removeProject = (rootPath) => {
   const parent = fs.realpathSync.native(os.tmpdir()),
     target = path.resolve(rootPath);
-  if (path.dirname(target) !== parent || !path.basename(target).startsWith("ide-zig-"))
+  if (path.dirname(target) !== parent || !path.basename(target).startsWith("ide-zls-"))
     throw new Error(`Refusing to remove a non-test directory: ${target}`);
   return fs.promises.rm(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 };

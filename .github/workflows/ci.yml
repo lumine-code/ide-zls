@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          path: ide-zig
+          path: ide-zls
       - uses: actions/checkout@v7
         with:
           repository: lumine-code/lumine
@@ -83,7 +83,7 @@ jobs:
       - name: Use HTTPS for public Git dependencies
         run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       - name: Install adapter dependencies
-        working-directory: ide-zig
+        working-directory: ide-zls
         run: npm ci --ignore-scripts
       - name: Install client dependencies
         working-directory: ide-client
@@ -107,4 +107,4 @@ jobs:
       - name: Run Jasmine against the real editor, ZLS and SDK
         working-directory: lumine
         timeout-minutes: 20
-        run: xvfb-run --auto-servernum npm start -- --dev --test ../ide-zig/spec
+        run: xvfb-run --auto-servernum npm start -- --dev --test ../ide-zls/spec

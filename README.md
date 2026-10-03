@@ -1,4 +1,4 @@
-# ide-zig
+# ide-zls
 
 Provide Zig language features with ZLS.
 
@@ -16,7 +16,7 @@ Connects Zig editors to the open-source Zig Language Server through the shared i
 
 ## Installation
 
-To install ide-zig search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-zig`.
+To install ide-zls search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-zls`.
 
 Install `ide-client` and `language-zig` as well. Install the [Zig SDK](https://ziglang.org/download/), then use **Manage Servers** to install ZLS. The server and SDK must have the same major and minor version; the adapter checks both before launching and chooses a matching managed release. Select their native executables in the package settings when they are not on PATH.
 
