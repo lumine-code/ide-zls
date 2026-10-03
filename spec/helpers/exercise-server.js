@@ -168,6 +168,24 @@ const exerciseServer = async (client, fixture) => {
     textDocument: { uri: fixture.zonUri },
   });
   check("ZON tokens", zonTokens.data.length > 0);
+  const zonBefore = client.notifications.length;
+  client.change(fixture.zonUri, ".{ .name = }\n");
+  check(
+    "ZON diagnostics",
+    !!(await client.waitFor(
+      () =>
+        client.notifications
+          .slice(zonBefore)
+          .find(
+            ({ method, params }) =>
+              method === "textDocument/publishDiagnostics" &&
+              uriKey(params.uri) === uriKey(fixture.zonUri) &&
+              params.diagnostics.length > 0,
+          ),
+      "ZON syntax findings",
+      30000,
+    )),
+  );
   const before = client.notifications.length;
   client.change(fixture.uri, fixture.text.replace("var unused:i32=3;", ""));
   const clear = await client.waitFor(
