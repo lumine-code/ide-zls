@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks on ${{ matrix.os }} (Node 24)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm pack --dry-run
+
+  integration:
+    name: Real ZLS and Lumine integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LUMINE_JASMINE_REPORTER: list
+      LUMINE_TEST_PACKAGES: ide-client language-zig
+      ZLS_VERSION: 0.16.0
+      REQUIRE_ZLS: 1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: ide-zig
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/lumine
+          path: lumine
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/ide-client
+          path: ide-client
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/language-zig
+          path: language-zig
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: lumine/.nvmrc
+          cache: npm
+          cache-dependency-path: lumine/package-lock.json
+      - name: Install the exact checksum-verified SDK and ZLS release
+        run: |
+          mkdir "$GITHUB_WORKSPACE/zig" "$GITHUB_WORKSPACE/zls"
+          curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum --check
+          tar -xJf zig.tar.xz -C "$GITHUB_WORKSPACE/zig" --strip-components=1
+          curl --fail --location --retry 3 --output zls.tar.xz https://github.com/zigtools/zls/releases/download/0.16.0/zls-x86_64-linux.tar.xz
+          echo "ded6d562a0b86ee878b1ddf70ffab2797ce3cdca3b02d6077548f9d56dff96b6  zls.tar.xz" | sha256sum --check
+          tar -xJf zls.tar.xz -C "$GITHUB_WORKSPACE/zls"
+          chmod +x "$GITHUB_WORKSPACE/zig/zig" "$GITHUB_WORKSPACE/zls/zls"
+          echo "ZIG_PATH=$GITHUB_WORKSPACE/zig/zig" >> "$GITHUB_ENV"
+          echo "ZLS_PATH=$GITHUB_WORKSPACE/zls/zls" >> "$GITHUB_ENV"
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y xvfb libx11-dev libxkbfile-dev libsecret-1-dev xz-utils
+      - name: Use HTTPS for public Git dependencies
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+      - name: Install adapter dependencies
+        working-directory: ide-zig
+        run: npm ci --ignore-scripts
+      - name: Install client dependencies
+        working-directory: ide-client
+        run: npm ci --ignore-scripts
+      - name: Install editor dependencies
+        working-directory: lumine
+        run: |
+          install() { npm ci --ignore-scripts; }
+          install || install || install
+      - name: Prepare Electron
+        working-directory: lumine
+        run: |
+          node node_modules/electron/install.js
+          npm run build
+      - name: Link editor service packages
+        run: |
+          echo "LUMINE_HOME=$GITHUB_WORKSPACE/.test-home" >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/.test-home/packages"
+          ln -s "$GITHUB_WORKSPACE/ide-client" "$GITHUB_WORKSPACE/.test-home/packages/ide-client"
+          ln -s "$GITHUB_WORKSPACE/language-zig" "$GITHUB_WORKSPACE/.test-home/packages/language-zig"
+      - name: Run Jasmine against the real editor, ZLS and SDK
+        working-directory: lumine
+        timeout-minutes: 20
+        run: xvfb-run --auto-servernum npm start -- --dev --test ../ide-zig/spec
