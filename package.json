@@ -1,0 +1,194 @@
+{
+  "name": "ide-zig",
+  "author": "lumine-code",
+  "description": "Provide Zig language features with ZLS.",
+  "repository": "https://github.com/lumine-code/ide-zig",
+  "bugs": {
+    "url": "https://github.com/lumine-code/ide-zig/issues"
+  },
+  "keywords": [
+    "zls",
+    "zon",
+    "comptime",
+    "allocator",
+    "language-server",
+    "lsp"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "lumine": "^1.0.0"
+  },
+  "main": "./lib/main",
+  "files": [
+    "lib",
+    "spec"
+  ],
+  "scripts": {
+    "test": "lumine --test spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "consumedServices": {
+    "ide-client": {
+      "versions": {
+        "^1.0.0": "consumeIdeClient"
+      }
+    }
+  },
+  "providedServices": {
+    "background-tips.provider": {
+      "versions": {
+        "1.0.0": "provideBackgroundTips"
+      }
+    }
+  },
+  "specPackages": [
+    "ide-client",
+    "language-zig"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.4.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "vscode-jsonrpc": "^9.0.3"
+  },
+  "configSchema": {
+    "serverPath": {
+      "title": "Server Path",
+      "description": "Absolute path to the native ZLS executable. Leave empty to use the managed copy, then PATH.",
+      "type": "string",
+      "default": ""
+    },
+    "zigPath": {
+      "title": "Zig Path",
+      "description": "Absolute path to the Zig SDK executable. Leave empty to use PATH. Zig and ZLS must share their major and minor version.",
+      "type": "string",
+      "default": ""
+    },
+    "notifyWhenMissing": {
+      "title": "Notify When Missing",
+      "description": "Offer to install ZLS when it or a matching Zig SDK is missing.",
+      "type": "boolean",
+      "default": true
+    },
+    "features": {
+      "title": "Features",
+      "description": "Which ZLS features the editor uses. ZON supplies diagnostics, formatting and semantic tokens; Zig supplies the remaining features.",
+      "type": "object",
+      "scopeResolution": "grammar",
+      "properties": {
+        "diagnostics": {
+          "title": "Diagnostics",
+          "description": "Report Zig syntax, AST checks and optional build findings.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "autocomplete": {
+          "title": "Autocomplete",
+          "description": "Complete Zig symbols, imports and builtins.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "hover": {
+          "title": "Hover",
+          "description": "Show Zig types and documentation.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "signature": {
+          "title": "Signature Help",
+          "description": "Show function parameters while entering calls.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "definition": {
+          "title": "Go To Definition",
+          "description": "Navigate to Zig declarations and resolved types.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "references": {
+          "title": "Find References",
+          "description": "Find uses of Zig symbols.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "symbols": {
+          "title": "Symbols",
+          "description": "Find document and workspace symbols.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "format": {
+          "title": "Format",
+          "description": "Format Zig and ZON documents.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "Rename Zig symbols across project source.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "codeActions": {
+          "title": "Code Actions",
+          "description": "Apply AST-check fixes and source actions.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "inlayHints": {
+          "title": "Inlay Hints",
+          "description": "Show inferred types and parameter names.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "semanticTokens": {
+          "title": "Semantic Tokens",
+          "description": "Classify Zig and ZON using semantic information.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        }
+      }
+    },
+    "buildOnSave": {
+      "title": "Build On Save",
+      "description": "Run compiler checks after saving. Server Default respects ZLS automatic detection of the project check step.",
+      "type": "string",
+      "enum": [
+        "server-default",
+        "enabled",
+        "disabled"
+      ],
+      "default": "server-default"
+    },
+    "parameterHints": {
+      "title": "Parameter Hints",
+      "description": "Show argument names inline. Server Default preserves the project and ZLS configuration.",
+      "type": "string",
+      "enum": [
+        "server-default",
+        "enabled",
+        "disabled"
+      ],
+      "default": "server-default"
+    }
+  }
+}
