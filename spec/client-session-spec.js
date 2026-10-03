@@ -1,4 +1,5 @@
 const { Point } = require("lumine");
+const { pathToFileURL } = require("node:url");
 const { createProject, removeProject, position, uriKey } = require("./helpers/project");
 const serverPath = process.env.ZLS_PATH || require("../lib/server").findOnPath("zls"),
   zigPath = process.env.ZIG_PATH || require("../lib/server").findOnPath("zig");
@@ -82,14 +83,12 @@ liveSuite("ide-zig actual editor routing", () => {
   it("routes completion, hover, signature, references, rename, symbols, hints, tokens and formatting", async () => {
     await ready();
     const m = main();
-    const suggestions = await m
-      .provideAutocomplete()
-      .getSuggestions({
-        editor,
-        bufferPosition: point("add(3,4)", 2),
-        prefix: "ad",
-        activatedManually: true,
-      });
+    const suggestions = await m.provideAutocomplete().getSuggestions({
+      editor,
+      bufferPosition: point("add(3,4)", 2),
+      prefix: "ad",
+      activatedManually: true,
+    });
     expect(
       suggestions.some((item) => (item.displayText || item.text || item.snippet || "") === "add"),
     ).toBe(true);
@@ -106,7 +105,17 @@ liveSuite("ide-zig actual editor routing", () => {
     const renamed = await m
       .provideRefactor()
       .rename(editor, point("add(3,4)"), "sum", { dryRun: true });
-    expect(renamed.edits.get(fixture.filePath).length).toBe(3);
+    const edits = [...renamed.edits].find(
+      ([file]) => uriKey(pathToFileURL(file).href) === uriKey(fixture.uri),
+    )?.[1];
+    expect(edits.length).toBe(3);
+    expect(edits.every(({ newText }) => newText === "sum")).toBe(true);
+    const call = position(fixture.text, "add(3,4)");
+    expect(
+      edits.some(({ oldRange }) =>
+        Point.fromObject(oldRange.start || oldRange[0]).isEqual([call.line, call.character]),
+      ),
+    ).toBe(true);
     expect(
       (await m.provideSymbol().getSymbols({ type: "file", editor })).some(
         ({ name }) => name === "Calculator",
@@ -130,12 +139,10 @@ liveSuite("ide-zig actual editor routing", () => {
             diagnostics.some(({ message }) => message.includes("unused local variable")),
         )
         .diagnostics.find(({ message }) => message.includes("unused local variable"));
-    const actions = await m
-        .provideIntentionsList()
-        .getIntentions({
-          textEditor: editor,
-          bufferPosition: new Point(issue.range.start.line, issue.range.start.character + 1),
-        }),
+    const actions = await m.provideIntentionsList().getIntentions({
+        textEditor: editor,
+        bufferPosition: new Point(issue.range.start.line, issue.range.start.character + 1),
+      }),
       discard = actions.find(({ title }) => title === "discard value");
     expect(discard).toBeTruthy();
     await discard.selected();
