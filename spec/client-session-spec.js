@@ -92,9 +92,9 @@ liveSuite("ide-zls actual editor routing", () => {
     expect(
       suggestions.some((item) => (item.displayText || item.text || item.snippet || "") === "add"),
     ).toBe(true);
-    expect(JSON.stringify(await m.provideHover().hover(editor, point("add(3,4)")))).toContain(
-      "Add two numbers.",
-    );
+    expect(
+      JSON.stringify(await m.provideContextHelp().getHelp(editor, point("add(3,4)"))),
+    ).toContain("Add two numbers.");
     expect(
       (await m.provideHoverSignature().getSignature(editor, point("add(3,4)", 6))).signatures[0]
         .label,
@@ -152,7 +152,7 @@ liveSuite("ide-zls actual editor routing", () => {
     lumine.config.set("ide-zls.features.rename", false);
     expect(await m.provideRefactor().rename(editor, point("add(3,4)"), "sum")).toBeNull();
     lumine.config.set("ide-zls.features.hover", false);
-    expect(await m.provideHover().hover(editor, point("add(3,4)"))).toBeNull();
+    expect(await m.provideContextHelp().getHelp(editor, point("add(3,4)"))).toBeNull();
     expect(session.state).toBe("running");
   });
   it("formats ZON through the real provider while refusing features the server cannot supply there", async () => {
