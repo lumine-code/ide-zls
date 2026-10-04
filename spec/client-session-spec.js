@@ -148,7 +148,7 @@ liveSuite("ide-zls actual editor routing", () => {
     await discard.selected();
     expect(editor.getText()).toContain("_ = unused;");
     lumine.config.set("ide-zls.features.format", false);
-    expect(await m.provideCodeFormatFile().formatEntireFile(editor)).toEqual([]);
+    expect(await m.provideCodeFormatFile().formatEntireFile(editor)).toBeNull();
     lumine.config.set("ide-zls.features.rename", false);
     expect(await m.provideRefactor().rename(editor, point("add(3,4)"), "sum")).toBeNull();
     lumine.config.set("ide-zls.features.hover", false);
