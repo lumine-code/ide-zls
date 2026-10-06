@@ -29,9 +29,9 @@ liveSuite("ide-zls actual editor routing", () => {
     published = [];
     lumine.config.set("ide-zls.serverPath", serverPath);
     lumine.config.set("ide-zls.zigPath", zigPath);
-    for (const name of ["language-zig", "ide-client", "ide-zls"])
+    for (const name of ["language-zig", "ide", "ide-zls"])
       await lumine.packages.activatePackage(name);
-    service = lumine.packages.getActivePackage("ide-client").mainModule.provideIdeClient();
+    service = lumine.packages.getActivePackage("ide").mainModule.provideIde();
     subscription = service.onDidPublishDiagnostics((value) => published.push(value));
     lumine.project.setPaths([fixture.rootPath]);
     editor = await lumine.workspace.open(fixture.filePath);
@@ -41,7 +41,7 @@ liveSuite("ide-zls actual editor routing", () => {
     subscription.dispose();
     editor?.destroy();
     zonEditor?.destroy();
-    for (const name of ["ide-zls", "ide-client", "language-zig"])
+    for (const name of ["ide-zls", "ide", "language-zig"])
       await lumine.packages.deactivatePackage(name);
     for (const key of [
       "serverPath",
@@ -79,7 +79,7 @@ liveSuite("ide-zls actual editor routing", () => {
     );
     return session;
   };
-  const main = () => lumine.packages.getActivePackage("ide-client").mainModule;
+  const main = () => lumine.packages.getActivePackage("ide").mainModule;
   it("routes completion, hover, signature, references, rename, symbols, hints, tokens and formatting", async () => {
     await ready();
     const m = main();
@@ -119,7 +119,7 @@ liveSuite("ide-zls actual editor routing", () => {
     const documentProvider = m.provideDocumentSymbolProvider();
     const source = documentProvider
       .getDocumentSymbolSources(editor)
-      .find(({ id }) => id === "ide-client:ide-zls");
+      .find(({ id }) => id === "ide:ide-zls");
     expect(source.state).toBe("ready");
     const symbols = await documentProvider.getDocumentSymbols(editor, { sourceId: source.id });
     expect(symbols.some(({ name }) => name === "Calculator")).toBe(true);

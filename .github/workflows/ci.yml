@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 60
     env:
       LUMINE_JASMINE_REPORTER: list
-      LUMINE_TEST_PACKAGES: ide-client language-zig
+      LUMINE_TEST_PACKAGES: ide language-zig
       ZLS_VERSION: 0.16.0
       REQUIRE_ZLS: 1
     steps:
@@ -53,8 +53,8 @@ jobs:
           path: lumine
       - uses: actions/checkout@v7
         with:
-          repository: lumine-code/ide-client
-          path: ide-client
+          repository: lumine-code/ide
+          path: ide
       - uses: actions/checkout@v7
         with:
           repository: lumine-code/language-zig
@@ -86,7 +86,7 @@ jobs:
         working-directory: ide-zls
         run: npm ci --ignore-scripts
       - name: Install client dependencies
-        working-directory: ide-client
+        working-directory: ide
         run: npm ci --ignore-scripts
       - name: Install editor dependencies
         working-directory: lumine
@@ -102,7 +102,7 @@ jobs:
         run: |
           echo "LUMINE_HOME=$GITHUB_WORKSPACE/.test-home" >> "$GITHUB_ENV"
           mkdir -p "$GITHUB_WORKSPACE/.test-home/packages"
-          ln -s "$GITHUB_WORKSPACE/ide-client" "$GITHUB_WORKSPACE/.test-home/packages/ide-client"
+          ln -s "$GITHUB_WORKSPACE/ide" "$GITHUB_WORKSPACE/.test-home/packages/ide"
           ln -s "$GITHUB_WORKSPACE/language-zig" "$GITHUB_WORKSPACE/.test-home/packages/language-zig"
       - name: Run Jasmine against the real editor, ZLS and SDK
         working-directory: lumine

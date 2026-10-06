@@ -22,7 +22,7 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
     const main = (await lumine.packages.activatePackage("ide-zls")).mainModule;
     lumine.config.set("ide-zls.serverPath", serverPath);
     lumine.config.set("ide-zls.zigPath", zigPath);
-    edge = main.consumeIdeClient({
+    edge = main.consumeIde({
       registerAdapter(value) {
         adapter = value;
         client = new LiveLspClient(value, fixture.rootPath);
@@ -49,7 +49,7 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
     expect(covered).toContain("diagnostic clear");
   });
   it("downloads and launches the verified managed native archive through the shared installer", async () => {
-    const packagePath = (await lumine.packages.loadPackage("ide-client")).path;
+    const packagePath = (await lumine.packages.loadPackage("ide")).path;
     const ManagedServers = require(path.join(packagePath, "lib", "managed-servers"));
     const managed = new ManagedServers(
       {
