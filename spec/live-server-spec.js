@@ -51,14 +51,14 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
   it("downloads and launches the verified managed native archive through the shared installer", async () => {
     const packagePath = (await lumine.packages.loadPackage("ide")).path;
     const ManagedServers = require(path.join(packagePath, "lib", "managed-servers"));
-    const managed = new ManagedServers(
-      {
-        adapters: new Map([[adapter.id, adapter]]),
-        allSessions: () => [],
-        reattachAll: async () => {},
-      },
-      { storageRoot: path.join(fixture.rootPath, "managed") },
-    );
+    const Manager = require(path.join(packagePath, "lib", "language-server-manager"));
+    const manager = new Manager();
+    spyOn(manager, "reattachAll").and.resolveTo();
+    const managed = new ManagedServers(manager, {
+      storageRoot: path.join(fixture.rootPath, "managed"),
+    });
+    manager.setManagedServers(managed);
+    manager.registerAdapter(adapter);
     try {
       const record = await managed.install(adapter.id, {
         version: process.env.ZLS_VERSION || "0.16.0",
@@ -70,7 +70,8 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
       const covered = await exerciseServer(client, fixture);
       expect(covered).toContain("code actions");
     } finally {
-      managed.emitter.dispose();
+      await client.stop();
+      await manager.deactivate();
     }
   });
 });
