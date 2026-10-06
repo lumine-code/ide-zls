@@ -1,5 +1,8 @@
 const childProcess = require("child_process");
 const path = require("path");
+const { configurationContext, workspaceConfiguration } = require(
+  path.join(lumine.packages.resolvePackagePath("ide-client"), "lib", "workspace-configuration"),
+);
 const { pathToFileURL } = require("url");
 const {
   createMessageConnection,
@@ -29,6 +32,14 @@ class LiveLspClient {
     this.sentRequests = [];
   }
 
+  configurationContext() {
+    return configurationContext(this.rootPath, this.launch, this.session);
+  }
+
+  configuration(items) {
+    return workspaceConfiguration(this.adapter, items, this.configurationContext());
+  }
+
   async start(managedServer) {
     const launch = await this.adapter.resolveServer({ rootPath: this.rootPath, managedServer });
     this.launch = launch;
@@ -50,13 +61,7 @@ class LiveLspClient {
       },
     );
     this.connection.onNotification((method, params) => this.notifications.push({ method, params }));
-    this.connection.onRequest("workspace/configuration", ({ items }) =>
-      Promise.all(
-        items.map(({ section, scopeUri }) =>
-          this.adapter.getWorkspaceConfiguration?.(section, scopeUri),
-        ),
-      ),
-    );
+    this.connection.onRequest("workspace/configuration", ({ items }) => this.configuration(items));
     this.connection.onRequest("workspace/applyEdit", () => ({ applied: true }));
     this.connection.onRequest("workspace/workspaceFolders", () => this.workspaceFolders);
     this.connection.onRequest("client/registerCapability", ({ registrations }) => {
@@ -165,7 +170,7 @@ class LiveLspClient {
     this.serverInfo = result.serverInfo;
     this.connection.sendNotification("initialized", {});
     this.connection.sendNotification("workspace/didChangeConfiguration", {
-      settings: (await this.adapter.getSettings?.()) || {},
+      settings: (await this.adapter.getSettings?.(this.configurationContext())) || {},
     });
     return result;
   }
