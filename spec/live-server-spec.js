@@ -2,8 +2,8 @@ const path = require("node:path");
 const { LiveLspClient } = require("./helpers/live-lsp-client");
 const { createProject, removeProject } = require("./helpers/project");
 const { exerciseServer } = require("./helpers/exercise-server");
-const serverPath = process.env.ZLS_PATH || require("../lib/server").findOnPath("zls"),
-  zigPath = process.env.ZIG_PATH || require("../lib/server").findOnPath("zig");
+const serverPath = process.env.ZLS_PATH || require("./helpers/server-resolver").findOnPath("zls"),
+  zigPath = process.env.ZIG_PATH || require("./helpers/server-resolver").findOnPath("zig");
 if (process.env.REQUIRE_ZLS && (!serverPath || !zigPath))
   throw new Error("CI requires a native ZLS server and matching Zig SDK.");
 const liveSuite = serverPath && zigPath ? describe : () => {};

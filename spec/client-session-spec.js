@@ -1,8 +1,8 @@
 const { Point } = require("lumine");
 const { pathToFileURL } = require("node:url");
 const { createProject, removeProject, position, uriKey } = require("./helpers/project");
-const serverPath = process.env.ZLS_PATH || require("../lib/server").findOnPath("zls"),
-  zigPath = process.env.ZIG_PATH || require("../lib/server").findOnPath("zig");
+const serverPath = process.env.ZLS_PATH || require("./helpers/server-resolver").findOnPath("zls"),
+  zigPath = process.env.ZIG_PATH || require("./helpers/server-resolver").findOnPath("zig");
 const liveSuite = serverPath && zigPath ? describe : () => {};
 const until = async (check, label) => {
   const deadline = Date.now() + 30000;

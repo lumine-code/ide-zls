@@ -1,3 +1,4 @@
+const { serverContext } = require("./server-resolver");
 const childProcess = require("child_process");
 const path = require("path");
 const { configurationContext, workspaceConfiguration } = require(
@@ -33,7 +34,7 @@ class LiveLspClient {
   }
 
   configurationContext() {
-    return configurationContext(this.rootPath, this.launch, this.session);
+    return configurationContext(this.rootPath, this.launch, this.session, serverContext().resolver);
   }
 
   configuration(items) {
@@ -41,7 +42,9 @@ class LiveLspClient {
   }
 
   async start(managedServer) {
-    const launch = await this.adapter.resolveServer({ rootPath: this.rootPath, managedServer });
+    const launch = await this.adapter.resolveServer(
+      serverContext({ rootPath: this.rootPath, managedServer }),
+    );
     this.launch = launch;
     this.child = childProcess.spawn(launch.command, launch.args || [], {
       cwd: launch.cwd || this.rootPath,
@@ -87,7 +90,7 @@ class LiveLspClient {
       clientInfo: { name: "Lumine adapter integration specs", version: "1.0.0" },
       rootUri,
       initializationOptions: await this.adapter.getInitializationOptions?.({
-        rootPath: this.rootPath,
+        ...serverContext({ rootPath: this.rootPath }),
         rootUri,
       }),
       workspaceFolders: this.workspaceFolders,

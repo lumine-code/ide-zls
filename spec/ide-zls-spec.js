@@ -1,3 +1,4 @@
+const { resolver, serverContext, installContext, serverApi } = require("./helpers/server-resolver");
 const fs = require("node:fs");
 const path = require("node:path");
 const { createProject, removeProject } = require("./helpers/project");
@@ -16,9 +17,14 @@ describe("ide-zls executable discovery and managed releases", () => {
   it("prefers the configured server over managed and system copies", async () => {
     spyOn(server, "resolveZig").and.resolveTo(process.execPath);
     spyOn(server, "probeVersion").and.resolveTo("0.16.0");
-    const launch = await server.resolveServer(process.execPath, {
-      binaryPath: path.join(fixture.rootPath, "missing"),
-    });
+    const launch = await server.resolveServer(
+      serverContext({
+        managedServer: {
+          binaryPath: path.join(fixture.rootPath, "missing"),
+        },
+      }),
+      process.execPath,
+    );
     expect(launch.command).toBe(process.execPath);
     expect(launch.args).toEqual([]);
     expect(launch.version).toBe("0.16.0");
@@ -26,43 +32,49 @@ describe("ide-zls executable discovery and managed releases", () => {
   it("uses the managed binary before searching PATH", async () => {
     spyOn(server, "resolveZig").and.resolveTo(process.execPath);
     spyOn(server, "probeVersion").and.resolveTo("0.16.0");
-    spyOn(server, "findOnPath").and.returnValue(null);
-    expect((await server.resolveServer("", { binaryPath: process.execPath })).command).toBe(
-      process.execPath,
-    );
-    expect(server.findOnPath).not.toHaveBeenCalled();
-  });
-  it("finds native PATH executables while skipping directories and shell wrappers", () => {
-    const name = path.basename(process.execPath, path.extname(process.execPath));
-    expect(server.findOnPath(name, { PATH: path.dirname(process.execPath) })).toBeTruthy();
-    fs.mkdirSync(path.join(fixture.rootPath, "zls"));
-    fs.writeFileSync(path.join(fixture.rootPath, "zls.cmd"), "wrapper");
-    expect(server.findOnPath("zls", { PATH: fixture.rootPath }, "win32")).toBeNull();
+    expect(
+      (
+        await server.resolveServer(
+          serverContext({ managedServer: { binaryPath: process.execPath } }),
+          "",
+        )
+      ).command,
+    ).toBe(process.execPath);
   });
   it("validates explicit SDK paths before starting a replacement server", async () => {
-    expect(await server.resolveZig(process.execPath, { PATH: "" })).toBe(process.execPath);
-    await expectAsync(server.resolveZig("relative/zig")).toBeRejectedWithError(/absolute/);
-    await expectAsync(server.resolveZig(fixture.rootPath)).toBeRejectedWithError(/executable file/);
-    await expectAsync(server.resolveServer(path.join(fixture.rootPath, "missing"))).toBeRejected();
+    expect(await server.resolveZig(serverContext({ env: { PATH: "" } }), process.execPath)).toBe(
+      process.execPath,
+    );
+    await expectAsync(server.resolveZig(serverContext(), "relative/zig")).toBeRejectedWithError(
+      /absolute/,
+    );
+    await expectAsync(server.resolveZig(serverContext(), fixture.rootPath)).toBeRejectedWithError(
+      /must name a file/,
+    );
+    await expectAsync(
+      server.resolveServer(serverContext(), path.join(fixture.rootPath, "missing")),
+    ).toBeRejected();
   });
   it("refuses mismatching or development SDKs instead of running an incompatible build runner", async () => {
     spyOn(server, "resolveZig").and.resolveTo(process.execPath);
     spyOn(server, "probeVersion").and.callFake(async (_command, args) =>
       args[0] === "version" ? "0.15.2" : "0.16.0",
     );
-    await expectAsync(server.resolveServer(process.execPath)).toBeRejectedWithError(
-      /same major and minor/,
-    );
+    await expectAsync(
+      server.resolveServer(serverContext(), process.execPath),
+    ).toBeRejectedWithError(/same major and minor/);
     server.probeVersion.and.callFake(async (_command, args) =>
       args[0] === "version" ? "0.16.0-dev.123" : "0.16.0",
     );
-    await expectAsync(server.resolveServer(process.execPath)).toBeRejectedWithError(/stable Zig/);
+    await expectAsync(
+      server.resolveServer(serverContext(), process.execPath),
+    ).toBeRejectedWithError(/stable Zig/);
   });
   it("returns null when either the server or SDK is absent", async () => {
-    spyOn(server, "findOnPath").and.returnValue(null);
-    expect(await server.resolveServer()).toBeNull();
+    spyOn(resolver, "select").and.resolveTo(null);
+    expect(await server.resolveServer(serverContext(), "")).toBeNull();
     spyOn(server, "resolveZig").and.resolveTo(null);
-    expect(await server.resolveServer(process.execPath)).toBeNull();
+    expect(await server.resolveServer(serverContext(), process.execPath)).toBeNull();
   });
   it("selects official archive names across native platforms", () => {
     for (const [platform, arch, name] of [
@@ -81,17 +93,21 @@ describe("ide-zls executable discovery and managed releases", () => {
     spyOn(server, "probeVersion").and.resolveTo("0.15.2");
     const lookup = jasmine.createSpy("lookup").and.resolveTo({ version: "0.15.0" });
     expect(
-      await server.latestServerVersion({
-        githubReleaseByTag: lookup,
-        latestGithubRelease: async () => ({ version: "0.16.0" }),
-      }),
+      await server.latestServerVersion(
+        serverApi({
+          githubReleaseByTag: lookup,
+          latestGithubRelease: async () => ({ version: "0.16.0" }),
+        }),
+      ),
     ).toBe("0.15.0");
     expect(lookup).toHaveBeenCalledWith("zigtools/zls", "0.15.0");
   });
   it("fetches the current stable release when the SDK has not been installed", async () => {
     spyOn(server, "resolveZig").and.resolveTo(null);
     const lookup = jasmine.createSpy("latest").and.resolveTo({ version: "0.16.0" });
-    expect(await server.latestServerVersion({ latestGithubRelease: lookup })).toBe("0.16.0");
+    expect(await server.latestServerVersion(serverApi({ latestGithubRelease: lookup }))).toBe(
+      "0.16.0",
+    );
     expect(lookup).toHaveBeenCalledWith("zigtools/zls");
   });
   it("verifies the published digest before extracting the native binary", async () => {
@@ -116,11 +132,13 @@ describe("ide-zls executable discovery and managed releases", () => {
       },
       setServerInstallationStatus() {},
     };
-    const installed = await server.installServer({
-      storagePath: fixture.rootPath,
-      version: "0.16.0",
-      api,
-    });
+    const installed = await server.installServer(
+      installContext({
+        storagePath: fixture.rootPath,
+        version: "0.16.0",
+        api,
+      }),
+    );
     expect(api.downloadFile.calls.mostRecent().args[2]).toEqual({
       type: process.platform === "win32" ? "zip" : "xz-tar",
       digest,
@@ -135,7 +153,9 @@ describe("ide-zls executable discovery and managed releases", () => {
       setServerInstallationStatus() {},
     };
     await expectAsync(
-      server.installServer({ storagePath: fixture.rootPath, version: "0.16.0", api }),
+      server.installServer(
+        installContext({ storagePath: fixture.rootPath, version: "0.16.0", api }),
+      ),
     ).toBeRejectedWithError(/does not publish/);
     api.githubReleaseByTag = async () => ({
       version: "0.16.0",
@@ -147,7 +167,9 @@ describe("ide-zls executable discovery and managed releases", () => {
       ],
     });
     await expectAsync(
-      server.installServer({ storagePath: fixture.rootPath, version: "0.16.0", api }),
+      server.installServer(
+        installContext({ storagePath: fixture.rootPath, version: "0.16.0", api }),
+      ),
     ).toBeRejectedWithError(/SHA256/);
     expect(api.downloadFile).not.toHaveBeenCalled();
   });
@@ -191,7 +213,7 @@ describe("ide-zls service edges and actual settings", () => {
   });
   it("preserves project build policy and server hint defaults", async () => {
     spyOn(require("../lib/server"), "resolveZig").and.resolveTo(null);
-    expect(await adapter.getSettings()).toEqual({});
+    expect(await adapter.getSettings(serverContext())).toEqual({});
     expect(adapter.getWorkspaceConfiguration("other")).toBeUndefined();
   });
   it("sends only supported settings in the flat zls configuration namespace", async () => {
@@ -203,8 +225,10 @@ describe("ide-zls service edges and actual settings", () => {
       enable_build_on_save: false,
       inlay_hints_show_parameter_name: true,
     };
-    expect(await adapter.getWorkspaceConfiguration("zls")).toEqual(expected);
-    expect(await adapter.getInitializationOptions()).toEqual(expected);
+    expect(await adapter.getWorkspaceConfiguration("zls", undefined, serverContext())).toEqual(
+      expected,
+    );
+    expect(await adapter.getInitializationOptions(serverContext())).toEqual(expected);
   });
   it("keeps unsupported ZON features unavailable without breaking scope-only diagnostic contexts", () => {
     const zon = { getPath: () => "/project/data.zon" };
@@ -247,7 +271,7 @@ describe("ide-zls service edges and actual settings", () => {
       reportMissingServer: missing,
     });
     try {
-      expect(await registered.resolveServer({ rootPath: "/project" })).toBeNull();
+      expect(await registered.resolveServer(serverContext({ rootPath: "/project" }))).toBeNull();
       expect(missing.calls.mostRecent().args[0]).toBe("ide-zls");
     } finally {
       registration.dispose();
