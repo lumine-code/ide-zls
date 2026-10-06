@@ -116,11 +116,13 @@ liveSuite("ide-zls actual editor routing", () => {
         Point.fromObject(oldRange.start || oldRange[0]).isEqual([call.line, call.character]),
       ),
     ).toBe(true);
-    expect(
-      (await m.provideSymbol().getSymbols({ type: "file", editor })).some(
-        ({ name }) => name === "Calculator",
-      ),
-    ).toBe(true);
+    const documentProvider = m.provideDocumentSymbolProvider();
+    const source = documentProvider
+      .getDocumentSymbolSources(editor)
+      .find(({ id }) => id === "ide-client:ide-zls");
+    expect(source.state).toBe("ready");
+    const symbols = await documentProvider.getDocumentSymbols(editor, { sourceId: source.id });
+    expect(symbols.some(({ name }) => name === "Calculator")).toBe(true);
     expect(
       (
         await m.provideInlayHints().inlayHints(editor, [0, fixture.text.split("\n").length - 2])
