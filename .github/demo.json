@@ -1,0 +1,17 @@
+{
+  "title": "ide-zls",
+  "description": "ZLS locates a missing semicolon in a Zig program.",
+  "recordedOn": "2026-10-13",
+  "sourceRevision": "8d5e21b564718d22ea2a5b4cd18d88f1815c1448",
+  "mode": "normal",
+  "fontSettings": "default",
+  "themeSourceRevision": "6564a9e21899b5541e9c8f8006f9be6d6d72e6ad",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "ZLS locates a missing semicolon in a Zig program.",
+      "width": 1100,
+      "height": 490
+    }
+  ]
+}

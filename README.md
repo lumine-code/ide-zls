@@ -14,6 +14,8 @@ Connects Zig editors to the open-source Zig Language Server through the shared i
 - **Formatting**: formats Zig source and ZON data with Zig formatting rules.
 - **Managed installation**: fetches official native ZLS releases and verifies the published SHA256 digest.
 
+![ZLS locates a missing semicolon in a Zig program.](.github/demo.png)
+
 ## Installation
 
 To install ide-zls search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-zls`.
