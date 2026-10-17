@@ -81,7 +81,7 @@ liveSuite("ide-zls actual editor routing", () => {
   };
   const main = () => lumine.packages.getActivePackage("ide").mainModule;
   it("routes completion, hover, signature, references, rename, symbols, hints, tokens and formatting", async () => {
-    await ready();
+    const session = await ready();
     const m = main();
     const suggestions = await m.provideAutocomplete().getSuggestions({
       editor,
@@ -129,7 +129,44 @@ liveSuite("ide-zls actual editor routing", () => {
       ).some(({ label }) => label === "first:"),
     ).toBe(true);
     expect((await m.provideSemanticTokens().semanticTokens(editor)).length).toBeGreaterThan(0);
-    expect((await m.provideCodeFormatFile().formatEntireFile(editor)).length).toBeGreaterThan(0);
+    const formatter = m.provideCodeFormatFile(),
+      connection = session.connection,
+      forward = connection.request.bind(connection);
+    let formatRequests = 0,
+      invalidations = 0,
+      firstReply;
+    spyOn(connection, "request").and.callFake(async (...args) => {
+      const result = await forward(...args);
+      if (args[0] === "textDocument/formatting") {
+        formatRequests++;
+        if (invalidations === 0) {
+          firstReply = result;
+          invalidations++;
+          // Hold a genuine server reply while its source becomes obsolete.
+          // The provider must decline those edits rather than apply stale ranges.
+          editor.setText(editor.getText() + "\n");
+        }
+      }
+      return result;
+    });
+    const stale = await until(async () => {
+      const result = await formatter.formatEntireFile(editor);
+      return invalidations ? { result } : null;
+    }, "real Zig formatting request");
+    expect(Array.isArray(firstReply)).toBe(true);
+    expect(firstReply?.length).toBeGreaterThan(0);
+    expect(stale.result).toBeNull();
+    // A declined snapshot is not a formatting result. Obtain fresh actual edits;
+    // an empty array still fails for this deliberately unformatted fixture.
+    const formatEdits = await until(
+      () => formatter.formatEntireFile(editor),
+      "current Zig formatting edits",
+    );
+    expect(Array.isArray(formatEdits)).toBe(true);
+    expect(formatEdits.length).toBeGreaterThan(0);
+    expect(formatRequests).toBeGreaterThanOrEqual(2);
+    expect(invalidations).toBe(1);
+    expect(editor.getText()).toBe(fixture.text + "\n");
   });
   it("applies an actual AST quickfix and honours switches without stopping the server", async () => {
     const session = await ready(),
