@@ -81,7 +81,7 @@ liveSuite("ide-zls actual editor routing", () => {
   };
   const main = () => lumine.packages.getActivePackage("ide").mainModule;
   it("routes completion, hover, signature, references, rename, symbols, hints, tokens and formatting", async () => {
-    const session = await ready();
+    await ready();
     const m = main();
     const suggestions = await m.provideAutocomplete().getSuggestions({
       editor,
@@ -130,43 +130,79 @@ liveSuite("ide-zls actual editor routing", () => {
     ).toBe(true);
     expect((await m.provideSemanticTokens().semanticTokens(editor)).length).toBeGreaterThan(0);
     const formatter = m.provideCodeFormatFile(),
-      connection = session.connection,
-      forward = connection.request.bind(connection);
+      manager = m.manager,
+      observedConnections = new Set();
     let formatRequests = 0,
       invalidations = 0,
-      firstReply;
-    spyOn(connection, "request").and.callFake(async (...args) => {
-      const result = await forward(...args);
-      if (args[0] === "textDocument/formatting") {
-        formatRequests++;
-        if (invalidations === 0) {
-          firstReply = result;
-          invalidations++;
-          // Hold a genuine server reply while its source becomes obsolete.
-          // The provider must decline those edits rather than apply stale ranges.
-          editor.setText(editor.getText() + "\n");
+      firstReply,
+      firstFormatSession,
+      finalFormatSession;
+    const observe = (owner) => {
+      const connection = owner.connection;
+      if (
+        owner.adapter.id !== "ide-zls" ||
+        owner.state !== "running" ||
+        !connection ||
+        observedConnections.has(connection)
+      )
+        return;
+      observedConnections.add(connection);
+      const forward = connection.request.bind(connection);
+      spyOn(connection, "request").and.callFake(async (...args) => {
+        const result = await forward(...args);
+        if (
+          args[0] === "textDocument/formatting" &&
+          uriKey(args[1].textDocument.uri) === uriKey(fixture.uri)
+        ) {
+          formatRequests++;
+          finalFormatSession = owner;
+          if (invalidations === 0) {
+            firstReply = result;
+            firstFormatSession = owner;
+            invalidations++;
+            // Hold a genuine server reply while its source becomes obsolete.
+            // The provider must decline those edits rather than apply stale ranges.
+            editor.setText(editor.getText() + "\n");
+          }
         }
-      }
-      return result;
+        return result;
+      });
+    };
+    // The provider reacquires its route for each call. Track actual running
+    // connections, including a replacement published between provider awaits.
+    const observation = manager.onDidChangeSession(({ session, state }) => {
+      if (state === "running") observe(session);
     });
-    const stale = await until(async () => {
-      const result = await formatter.formatEntireFile(editor);
-      return invalidations ? { result } : null;
-    }, "real Zig formatting request");
-    expect(Array.isArray(firstReply)).toBe(true);
-    expect(firstReply?.length).toBeGreaterThan(0);
-    expect(stale.result).toBeNull();
-    // A declined snapshot is not a formatting result. Obtain fresh actual edits;
-    // an empty array still fails for this deliberately unformatted fixture.
-    const formatEdits = await until(
-      () => formatter.formatEntireFile(editor),
-      "current Zig formatting edits",
-    );
-    expect(Array.isArray(formatEdits)).toBe(true);
-    expect(formatEdits.length).toBeGreaterThan(0);
-    expect(formatRequests).toBeGreaterThanOrEqual(2);
-    expect(invalidations).toBe(1);
-    expect(editor.getText()).toBe(fixture.text + "\n");
+    try {
+      for (const owner of manager.allSessions()) observe(owner);
+      const stale = await until(async () => {
+        const result = await formatter.formatEntireFile(editor);
+        return invalidations ? { result } : null;
+      }, "real Zig formatting request");
+      expect(Array.isArray(firstReply)).toBe(true);
+      expect(firstReply?.length).toBeGreaterThan(0);
+      expect(stale.result).toBeNull();
+      // Exercise the same physical replacement used by file-watch recovery.
+      // The next formatter call must obtain real edits through the new route.
+      await manager.restart(firstFormatSession);
+      const formatEdits = await until(
+        () => formatter.formatEntireFile(editor),
+        "current Zig formatting edits",
+      );
+      expect(Array.isArray(formatEdits)).toBe(true);
+      expect(formatEdits.length).toBeGreaterThan(0);
+      expect(formatRequests).toBeGreaterThanOrEqual(2);
+      expect(invalidations).toBe(1);
+      expect(editor.getText()).toBe(fixture.text + "\n");
+      expect(firstFormatSession.state).toBe("stopped");
+      expect(finalFormatSession).not.toBe(firstFormatSession);
+      expect(finalFormatSession.adapter).toBe(firstFormatSession.adapter);
+      expect(manager.adapters.get("ide-zls")).toBe(finalFormatSession.adapter);
+      expect(finalFormatSession.state).toBe("running");
+      expect(await service.activeSessionsForEditor(editor)).toContain(finalFormatSession);
+    } finally {
+      observation.dispose();
+    }
   });
   it("applies an actual AST quickfix and honours switches without stopping the server", async () => {
     const session = await ready(),
