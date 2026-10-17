@@ -2,6 +2,7 @@ const path = require("node:path");
 const { LiveLspClient } = require("./helpers/live-lsp-client");
 const { createProject, removeProject } = require("./helpers/project");
 const { exerciseServer } = require("./helpers/exercise-server");
+const { createGithubFetch } = require("./helpers/github-fetch");
 const serverPath = process.env.ZLS_PATH || require("./helpers/server-resolver").findOnPath("zls"),
   zigPath = process.env.ZIG_PATH || require("./helpers/server-resolver").findOnPath("zig");
 if (process.env.REQUIRE_ZLS && (!serverPath || !zigPath))
@@ -56,6 +57,7 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
     spyOn(manager, "reattachAll").and.resolveTo();
     const managed = new ManagedServers(manager, {
       storageRoot: path.join(fixture.rootPath, "managed"),
+      fetchUrl: createGithubFetch({ token: process.env.LUMINE_TEST_GITHUB_TOKEN }),
     });
     manager.setManagedServers(managed);
     manager.registerAdapter(adapter);

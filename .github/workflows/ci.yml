@@ -32,6 +32,8 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run format:check
+      - name: Test scoped GitHub integration transport
+        run: node --test test/github-fetch.test.js
       - run: npm pack --dry-run
 
   integration:
@@ -107,4 +109,6 @@ jobs:
       - name: Run Jasmine against the real editor, ZLS and SDK
         working-directory: lumine
         timeout-minutes: 20
+        env:
+          LUMINE_TEST_GITHUB_TOKEN: ${{ github.token }}
         run: xvfb-run --auto-servernum npm start -- --dev --test ../ide-zls/spec
