@@ -41,7 +41,7 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
   });
   it("returns usable compiler diagnostics, intelligence, source edits, hints, tokens and ZON formatting", async () => {
     const { serverInfo } = await client.start();
-    expect(serverInfo.version).toBe(process.env.ZLS_VERSION || "0.16.0");
+    expect(serverInfo.version).toBe(process.env.ZLS_VERSION || "0.17.0");
     const covered = await exerciseServer(client, fixture);
     expect(covered).toContain("cross-file definition");
     expect(covered).toContain("standard library navigation");
@@ -63,7 +63,7 @@ liveSuite("ide-zls real ZLS and Zig SDK", () => {
     manager.registerAdapter(adapter);
     try {
       const record = await managed.install(adapter.id, {
-        version: process.env.ZLS_VERSION || "0.16.0",
+        version: process.env.ZLS_VERSION || "0.17.0",
       });
       expect(record.checksum).toMatch(/^sha256:[a-f0-9]{64}$/);
       lumine.config.set("ide-zls.serverPath", "");

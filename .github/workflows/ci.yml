@@ -43,7 +43,7 @@ jobs:
     env:
       LUMINE_JASMINE_REPORTER: list
       LUMINE_TEST_PACKAGES: ide language-zig
-      ZLS_VERSION: 0.16.0
+      ZLS_VERSION: 0.17.0
       REQUIRE_ZLS: 1
     steps:
       - uses: actions/checkout@v7
@@ -69,10 +69,10 @@ jobs:
       - name: Install the exact checksum-verified SDK and ZLS release
         run: |
           mkdir "$GITHUB_WORKSPACE/zig" "$GITHUB_WORKSPACE/zls"
-          curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
           echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum --check
           tar -xJf zig.tar.xz -C "$GITHUB_WORKSPACE/zig" --strip-components=1
-          curl --fail --location --retry 3 --output zls.tar.xz https://github.com/zigtools/zls/releases/download/0.16.0/zls-x86_64-linux.tar.xz
+          curl --fail --location --retry 3 --output zls.tar.xz https://github.com/zigtools/zls/releases/download/0.17.0/zls-x86_64-linux.tar.xz
           echo "ded6d562a0b86ee878b1ddf70ffab2797ce3cdca3b02d6077548f9d56dff96b6  zls.tar.xz" | sha256sum --check
           tar -xJf zls.tar.xz -C "$GITHUB_WORKSPACE/zls"
           chmod +x "$GITHUB_WORKSPACE/zig/zig" "$GITHUB_WORKSPACE/zls/zls"
