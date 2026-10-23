@@ -70,10 +70,10 @@ jobs:
         run: |
           mkdir "$GITHUB_WORKSPACE/zig" "$GITHUB_WORKSPACE/zls"
           curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
-          echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum --check
+          echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  zig.tar.xz" | sha256sum --check
           tar -xJf zig.tar.xz -C "$GITHUB_WORKSPACE/zig" --strip-components=1
           curl --fail --location --retry 3 --output zls.tar.xz https://github.com/zigtools/zls/releases/download/0.17.0/zls-x86_64-linux.tar.xz
-          echo "ded6d562a0b86ee878b1ddf70ffab2797ce3cdca3b02d6077548f9d56dff96b6  zls.tar.xz" | sha256sum --check
+          echo "dfa4514e1868803fdf2ae56832c88b9d400094d70ea6bb136b57bcc91af10258  zls.tar.xz" | sha256sum --check
           tar -xJf zls.tar.xz -C "$GITHUB_WORKSPACE/zls"
           chmod +x "$GITHUB_WORKSPACE/zig/zig" "$GITHUB_WORKSPACE/zls/zls"
           echo "ZIG_PATH=$GITHUB_WORKSPACE/zig/zig" >> "$GITHUB_ENV"
